@@ -22,4 +22,4 @@ requires:
   Fcntl: 0
   File::Path: 0
   File::Temp: 0
-version: 0.04
+version: 0.05
