@@ -6,6 +6,7 @@ use Carp qw(croak);
 use File::Path qw();
 use File::Spec;
 use Fcntl qw(:DEFAULT :flock);
+use IO::File ();
 
 use IPC::ConcurrencyLimit::Lock;
 our @ISA = qw(IPC::ConcurrencyLimit::Lock);
@@ -161,7 +162,7 @@ their gratitude.
 
 =head1 COPYRIGHT AND LICENSE
 
- (C) 2011 Steffen Mueller. All rights reserved.
+ (C) 2011, 2012 Steffen Mueller. All rights reserved.
  
  This code is available under the same license as Perl version
  5.8.1 or higher.
