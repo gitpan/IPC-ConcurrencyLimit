@@ -49,6 +49,12 @@ sub get_lock {
   my $self = shift;
   my $main_lock = $self->{main_lock};
 
+  # Convert retries to a sub if it's not one already
+  if ( ref $self->{retries} ne "CODE" ) {
+      my $max_retries = $self->{retries};
+      $self->{retries} = sub { return $_[0] != $max_retries + 1 };
+  }
+
   my $id = $main_lock->get_lock;
   return $id if defined $id;
 
@@ -73,7 +79,7 @@ sub get_lock {
       }
       ++$tries;
       sleep($interval) if $interval;
-    }} while (not defined($id) and $tries != $self->{retries}+1);
+    }} while (not defined($id) and $self->{retries}->($tries));
     1;
   }
   or do {
@@ -165,6 +171,24 @@ a standby process. Additionally, C<interval> can indicate a number of seconds
 to wait between retries (also supports fractional seconds down to what
 C<Time::HiRes::sleep> supports).
 
+C<retries> can also be passed a code reference that will be called on every
+retry, with the current number of retries as its first argument. Returning true
+from this routine will break the loop and thus give up attempting to obtain
+the lock. In its most simple form, it allows for an infinite number of
+retries by calling it this way:
+
+  my $limit = IPC::ConcurrencyLimit::WithStandby->new(
+    retries           => sub {0},
+    interval          => 0.01,
+    maxproc           => 1,
+    standby_max_procs => 1,
+    ...
+  );
+
+The form above would be used to have a single process running, with a second
+one ready to take over 1/100th of a second after it exits, at the expense of
+attempting to obtain a look 100 times per second.
+
 Finally, as a way to tell blocked worker processes apart from standby
 processes, the module supports the C<process_name_change> option. If set to
 true, then the module will modify the process name of standby processes via
@@ -180,6 +204,8 @@ Note the curiously stripped C<perl> prefix.
 
 Steffen Mueller, C<smueller@cpan.org>
 
+David Morel, C<david.morel@amakuru.net>
+
 =head1 ACKNOWLEDGMENT
 
 This module was originally developed for booking.com.
@@ -190,10 +216,10 @@ their gratitude.
 =head1 COPYRIGHT AND LICENSE
 
  (C) 2012 Steffen Mueller. All rights reserved.
- 
+
  This code is available under the same license as Perl version
  5.8.1 or higher.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
